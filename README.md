@@ -1,3 +1,3 @@
 # C# Promises
 
-Derived from [RSG C# Promises](https://github.com/Real-Serious-Games/C-Sharp-Promise).
+A lightweight Promises library derived from [RSG C# Promises](https://github.com/Real-Serious-Games/C-Sharp-Promise).

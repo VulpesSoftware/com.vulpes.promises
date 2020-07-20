@@ -1,0 +1,18 @@
+{
+  "name": "com.vulpes.promises",
+  "displayName": "Vulpes Promises",
+  "version": "1.0.0",
+  "unity": "2019.1",
+  "description": "A lightweight Promises library derived from RSG C# Promises.",
+  "keywords": [
+    "vulpes",
+    "promises"
+  ],
+  "license": "MIT License",
+  "author": {
+    "name": "Vulpes Software",
+    "email": "tylahheil@gmail.com",
+    "url": "https://vulpessoftware.com"
+  },
+  "dependencies": {}
+}
