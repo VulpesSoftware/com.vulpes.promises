@@ -53,16 +53,16 @@ namespace Vulpes.Promises
             lock (staticLock)
             {
                 var promise = pool.Count > 0 ? pool.Dequeue() : new Promise();
-                promise.PromiseState = PromiseState.Pending;
-                promise.hasBeenRecycled = false;
+                promise.State = PromiseState.Pending;
+                promise.recycled = false;
                 return promise;
             }
         }
 
-        internal static Promise Create(Action<Exception> akExceptionHandler)
+        internal static Promise Create(Action<Exception> exceptionHandler)
         {
             var promise = Create();
-            promise.exceptionHandler = akExceptionHandler;
+            promise.exceptionHandler = exceptionHandler;
             return promise;
         }
 
@@ -73,44 +73,44 @@ namespace Vulpes.Promises
             return promise;
         }
 
-        public static IPromise Rejected(Exception akException)
+        public static IPromise Rejected(Exception exception)
         {
             var promise = Create();
-            promise.Reject(akException);
+            promise.Reject(exception);
             return promise;
         }
 
-        public IPromise WithName(string asName)
+        public IPromise WithName(string name)
         {
-            Name = asName;
+            Name = name;
             return this;
         }
 
-        public void Reject(Exception akException)
+        public void Reject(Exception exception)
         {
-            if (PromiseState != PromiseState.Pending)
+            if (State != PromiseState.Pending)
             {
-                throw new PromiseStateException($"Vulpes.Promises.Promise.Reject: Cannot Reject Promise {ToString()} (State: {PromiseState.ToString()})");
+                throw new PromiseStateException($"Vulpes.Promises.Promise.Reject: Cannot Reject Promise {ToString()} (State: {State})");
             }
-            PromiseState = PromiseState.Rejected;
-            exception = akException;
+            State = PromiseState.Rejected;
+            this.exception = exception;
             if (TryReject())
             {
-                exception = null;
+                this.exception = null;
                 exceptionHandler = null;
             } else if (isDone)
             {
-                throw akException;
+                throw exception;
             }
         }
 
         public void Resolve()
         {
-            if (PromiseState != PromiseState.Pending)
+            if (State != PromiseState.Pending)
             {
-                throw new PromiseStateException($"Vulpes.Promises.Promise.Resolve: Cannot Resolve Promise {ToString()} (State: {PromiseState.ToString()})");
+                throw new PromiseStateException($"Vulpes.Promises.Promise.Resolve: Cannot Resolve Promise {ToString()} (State: {State})");
             }
-            PromiseState = PromiseState.Resolved;
+            State = PromiseState.Resolved;
             if (!isDone)
             {
                 return;
@@ -121,10 +121,10 @@ namespace Vulpes.Promises
             }
         }
 
-        public IPromise Catch(Action<Exception> akOnRejected)
+        public IPromise Catch(Action<Exception> onRejected)
         {
-            exceptionHandler = akOnRejected;
-            if (PromiseState != PromiseState.Rejected)
+            exceptionHandler = onRejected;
+            if (State != PromiseState.Rejected)
             {
                 return this;
             }
@@ -134,14 +134,14 @@ namespace Vulpes.Promises
             }
             Recycle();
             var p = Create();
-            p.PromiseState = PromiseState.Rejected;
+            p.State = PromiseState.Rejected;
             return p;
         }
 
         public void Done()
         {
             isDone = true;
-            switch (PromiseState)
+            switch (State)
             {
                 case PromiseState.Pending:
                     return;
@@ -161,46 +161,46 @@ namespace Vulpes.Promises
             }
         }
 
-        public void Done(Action akAction)
+        public void Done(Action onResolved)
         {
-            resolveHandlers.Add(akAction);
+            resolveHandlers.Add(onResolved);
             Done();
         }
 
-        public IPromise Then(Action akAction)
+        public IPromise Then(Action onResolved)
         {
             var p = Create(exceptionHandler);
             Done(() =>
             {
-                akAction();
+                onResolved();
                 p.Resolve();
             });
             return p;
         }
 
-        public IPromise Then(Func<IPromise> akPromise)
+        public IPromise Then(Func<IPromise> onResolved)
         {
             var p = Create(exceptionHandler);
             Done(() =>
             {
-                akPromise().Catch(exceptionHandler).Done(p.Resolve);
+                onResolved().Catch(exceptionHandler).Done(p.Resolve);
             });
             return p;
         }
 
-        public IPromise<ConvertedT> Then<ConvertedT>(Func<IPromise<ConvertedT>> akPromise)
+        public IPromise<ConvertedT> Then<ConvertedT>(Func<IPromise<ConvertedT>> onResolved)
         {
             var p = Promise<ConvertedT>.Create(exceptionHandler);
             Done(() =>
             {
-                akPromise().Catch(exceptionHandler).Done(v => p.Resolve(v));
+                onResolved().Catch(exceptionHandler).Done(v => p.Resolve(v));
             });
             return p;
         }
         
         protected internal override void Recycle()
         {
-            hasBeenRecycled = true;
+            recycled = true;
             Name = string.Empty;
             isDone = false;
             resolveHandlers.Clear();
@@ -264,65 +264,65 @@ namespace Vulpes.Promises
             lock (staticLock)
             {
                 var promise = pool.Count > 0 ? pool.Dequeue() : new Promise<PromisedT>();
-                promise.PromiseState = PromiseState.Pending;
-                promise.hasBeenRecycled = false;
+                promise.State = PromiseState.Pending;
+                promise.recycled = false;
                 return promise;
             }
         }
 
-        internal static Promise<PromisedT> Create(Action<Exception> akExceptionHandler)
+        internal static Promise<PromisedT> Create(Action<Exception> exceptionHandler)
         {
             var promise = Create();
-            promise.exceptionHandler = akExceptionHandler;
+            promise.exceptionHandler = exceptionHandler;
             return promise;
         }
 
-        public static IPromise<PromisedT> Resolved(PromisedT akValue)
+        public static IPromise<PromisedT> Resolved(PromisedT value)
         {
             var promise = Create();
-            promise.Resolve(akValue);
+            promise.Resolve(value);
             return promise;
         }
 
-        public static IPromise<PromisedT> Rejected(Exception akException)
+        public static IPromise<PromisedT> Rejected(Exception exception)
         {
             var promise = Create();
-            promise.Reject(akException);
+            promise.Reject(exception);
             return promise;
         }
 
-        public IPromise<PromisedT> WithName(string asName)
+        public IPromise<PromisedT> WithName(string name)
         {
-            Name = asName;
+            Name = name;
             return this;
         }
 
-        public void Reject(Exception akException)
+        public void Reject(Exception exception)
         {
-            if (PromiseState != PromiseState.Pending)
+            if (State != PromiseState.Pending)
             {
-                throw new PromiseStateException($"Vulpes.Promises.Promise.Reject: Cannot Reject Promise {ToString()} (State: {PromiseState.ToString()})");
+                throw new PromiseStateException($"Vulpes.Promises.Promise.Reject: Cannot Reject Promise {ToString()} (State: {State})");
             }
-            PromiseState = PromiseState.Rejected;
-            exception = akException;
+            State = PromiseState.Rejected;
+            this.exception = exception;
             if (TryReject())
             {
-                exception = null;
+                this.exception = null;
                 exceptionHandler = null;
             } else if (isDone)
             {
-                throw akException;
+                throw exception;
             }
         }
 
-        public void Resolve(PromisedT akValue)
+        public void Resolve(PromisedT value)
         {
-            if (PromiseState != PromiseState.Pending)
+            if (State != PromiseState.Pending)
             {
-                throw new PromiseStateException($"Vulpes.Promises.Promise.Resolve: Cannot Resolve Promise {ToString()} (State: {PromiseState.ToString()})");
+                throw new PromiseStateException($"Vulpes.Promises.Promise.Resolve: Cannot Resolve Promise {ToString()} (State: {State})");
             }
-            resolveValue = akValue;
-            PromiseState = PromiseState.Resolved;
+            resolveValue = value;
+            State = PromiseState.Resolved;
             if (!isDone)
             {
                 return;
@@ -333,10 +333,10 @@ namespace Vulpes.Promises
             }
         }
 
-        public IPromise<PromisedT> Catch(Action<Exception> akOnRejected)
+        public IPromise<PromisedT> Catch(Action<Exception> onRejected)
         {
-            exceptionHandler = akOnRejected;
-            if (PromiseState != PromiseState.Rejected)
+            exceptionHandler = onRejected;
+            if (State != PromiseState.Rejected)
             {
                 return this;
             }
@@ -346,14 +346,14 @@ namespace Vulpes.Promises
             }
             Recycle();
             var p = Create();
-            p.PromiseState = PromiseState.Rejected;
+            p.State = PromiseState.Rejected;
             return p;
         }
 
         public void Done()
         {
             isDone = true;
-            switch (PromiseState)
+            switch (State)
             {
                 case PromiseState.Pending:
                     return;
@@ -373,26 +373,26 @@ namespace Vulpes.Promises
             }
         }
 
-        public void Done(Action akAction)
+        public void Done(Action onResolved)
         {
-            resolveHandlers.Add(v => { akAction(); });
+            resolveHandlers.Add(v => { onResolved(); });
             Done();
         }
 
-        public void Done(Action<PromisedT> akAction)
+        public void Done(Action<PromisedT> onResolved)
         {
-            resolveHandlers.Add(akAction);
+            resolveHandlers.Add(onResolved);
             Done();
         }
 
-        public IPromise Then(Action akAction)
+        public IPromise Then(Action onResolved)
         {
             var p = Promise.Create(exceptionHandler);
             Done(v =>
             {
                 try
                 {
-                    akAction();
+                    onResolved();
                     p.Resolve();
                 }
                 catch (Exception e)
@@ -403,14 +403,14 @@ namespace Vulpes.Promises
             return p;
         }
 
-        public IPromise<PromisedT> Then(Action<PromisedT> akAction)
+        public IPromise<PromisedT> Then(Action<PromisedT> onResolved)
         {
             var p = Create(exceptionHandler);
             Done(v =>
             {
                 try
                 {
-                    akAction(v);
+                    onResolved(v);
                     p.Resolve(v);
                 }
                 catch (Exception e)
@@ -421,14 +421,14 @@ namespace Vulpes.Promises
             return p;
         }
 
-        public IPromise Then(Func<PromisedT, IPromise> akPromise)
+        public IPromise Then(Func<PromisedT, IPromise> onResolved)
         {
             var p = Promise.Create(exceptionHandler);
             Done(v =>
             {
                 try
                 {
-                    akPromise(v).Done(p.Resolve);
+                    onResolved(v).Done(p.Resolve);
                 }
                 catch (Exception e)
                 {
@@ -438,14 +438,14 @@ namespace Vulpes.Promises
             return p;
         }
 
-        public IPromise<PromisedT> Then(Func<IPromise> akPromise)
+        public IPromise<PromisedT> Then(Func<IPromise> onResolved)
         {
             var p = Create(exceptionHandler);
             Done(v =>
             {
                 try
                 {
-                    akPromise().Done(() => { p.Resolve(v); });
+                    onResolved().Done(() => { p.Resolve(v); });
                 }
                 catch (Exception e)
                 {
@@ -455,14 +455,14 @@ namespace Vulpes.Promises
             return p;
         }
 
-        public IPromise<PromisedT> Then(Func<IPromise<PromisedT>> akPromise)
+        public IPromise<PromisedT> Then(Func<IPromise<PromisedT>> onResolved)
         {
             var p = Create(exceptionHandler);
             Done(v =>
             {
                 try
                 {
-                    akPromise().Done(p.Resolve);
+                    onResolved().Done(p.Resolve);
                 }
                 catch (Exception e)
                 {
@@ -472,14 +472,14 @@ namespace Vulpes.Promises
             return p;
         }
 
-        public IPromise<PromisedT> Then(Func<PromisedT, IPromise<PromisedT>> akPromise)
+        public IPromise<PromisedT> Then(Func<PromisedT, IPromise<PromisedT>> onResolved)
         {
             var p = Create(exceptionHandler);
             Done(v =>
             {
                 try
                 {
-                    akPromise(v).Done(p.Resolve);
+                    onResolved(v).Done(p.Resolve);
                 }
                 catch (Exception e)
                 {
@@ -489,14 +489,14 @@ namespace Vulpes.Promises
             return p;
         }
         
-        public IPromise<ConvertedT> Then<ConvertedT>(Func<PromisedT, ConvertedT> akAction)
+        public IPromise<ConvertedT> Then<ConvertedT>(Func<PromisedT, ConvertedT> onResolved)
         {
             var p = Promise<ConvertedT>.Create(exceptionHandler);
             Done(v =>
             {
                 try
                 {
-                    p.Resolve(akAction(v));
+                    p.Resolve(onResolved(v));
                 }
                 catch (Exception e)
                 {
@@ -506,14 +506,14 @@ namespace Vulpes.Promises
             return p;
         }
 
-        public IPromise<ConvertedT> Then<ConvertedT>(Func<PromisedT, IPromise<ConvertedT>> akPromise)
+        public IPromise<ConvertedT> Then<ConvertedT>(Func<PromisedT, IPromise<ConvertedT>> onResolved)
         {
             var p = Promise<ConvertedT>.Create(exceptionHandler);
             Done(v =>
             {
                 try
                 {
-                    akPromise(v).Done(p.Resolve);
+                    onResolved(v).Done(p.Resolve);
                 }
                 catch (Exception e)
                 {
@@ -525,11 +525,11 @@ namespace Vulpes.Promises
 
         protected internal override void Recycle()
         {
-            if (hasBeenRecycled)
+            if (recycled)
             {
                 return;
             }
-            hasBeenRecycled = true;
+            recycled = true;
             Name = string.Empty;
             resolveValue = default;
             isDone = false;

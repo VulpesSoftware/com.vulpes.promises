@@ -18,11 +18,11 @@ namespace Vulpes.Promises
         private int currentFrame;
         private LinkedList<PromiseTimerWaitPredicate> waitingPromises = new LinkedList<PromiseTimerWaitPredicate>();
 
-        private LinkedListNode<PromiseTimerWaitPredicate> FindInWaiting(IPromise akPromise)
+        private LinkedListNode<PromiseTimerWaitPredicate> FindInWaiting(IPromise promise)
         {
             for (var node = waitingPromises.First; node != null; node = node.Next)
             {
-                if (node.Value.pendingPromise.Id.Equals(akPromise.Id))
+                if (node.Value.pendingPromise.Id.Equals(promise.Id))
                 {
                     return node;
                 }
@@ -30,34 +30,34 @@ namespace Vulpes.Promises
             return null;
         }
 
-        private LinkedListNode<PromiseTimerWaitPredicate> RemoveNode(LinkedListNode<PromiseTimerWaitPredicate> akNode)
+        private LinkedListNode<PromiseTimerWaitPredicate> RemoveNode(LinkedListNode<PromiseTimerWaitPredicate> node)
         {
-            var current = akNode;
-            akNode = current.Next;
+            var current = node;
+            node = current.Next;
             waitingPromises.Remove(current);
-            return akNode;
+            return node;
         }
 
-        private void RepeatPromise(Func<IPromise> akPromise, Promise akPendingPromise, Func<bool> akPredicate)
+        private void RepeatPromise(Func<IPromise> promise, Promise pendingPromise, Func<bool> predicate)
         {
-            akPromise().Then(() =>
+            promise().Then(() =>
             {
-                if (akPredicate())
+                if (predicate())
                 {
-                    akPendingPromise.Resolve();
+                    pendingPromise.Resolve();
                 } else
                 {
-                    RepeatPromise(akPromise, akPendingPromise, akPredicate);
+                    RepeatPromise(promise, pendingPromise, predicate);
                 }
             }).Catch(e =>
             {
-                akPendingPromise.Reject(e);
+                pendingPromise.Reject(e);
             }).Done();
         }
 
-        public void Update(float afDeltaTime)
+        public void Update(float deltaTime)
         {
-            currentTime += afDeltaTime;
+            currentTime += deltaTime;
             currentFrame++;
 
             var nextPromiseNode = waitingPromises.First;
@@ -93,17 +93,17 @@ namespace Vulpes.Promises
             }
         }
 
-        public IPromise WaitFor(float afSeconds)
+        public IPromise WaitFor(float seconds)
         {
-            return WaitUntil(t => t.elapsedTime >= afSeconds);
+            return WaitUntil(t => t.elapsedTime >= seconds);
         }
 
-        public IPromise WaitWhile(Func<PromiseTimeData, bool> akPredicate)
+        public IPromise WaitWhile(Func<PromiseTimeData, bool> predicate)
         {
-            return WaitUntil(t => !akPredicate(t));
+            return WaitUntil(t => !predicate(t));
         }
 
-        public IPromise WaitUntil(Func<PromiseTimeData, bool> akPredicate)
+        public IPromise WaitUntil(Func<PromiseTimeData, bool> predicate)
         {
             var promise = Promise.Create();
             var waitPredicate = new PromiseTimerWaitPredicate()
@@ -111,23 +111,23 @@ namespace Vulpes.Promises
                 startingTime = currentTime,
                 startingFrame = currentFrame,
                 timeData = new PromiseTimeData(),
-                predicate = akPredicate,
+                predicate = predicate,
                 pendingPromise = promise
             };
             waitingPromises.AddLast(waitPredicate);
             return promise;
         }
 
-        public IPromise RepeatUntil(Func<IPromise> akPromise, Func<bool> akPredicate)
+        public IPromise RepeatUntil(Func<IPromise> promise, Func<bool> predicate)
         {
             var promiseToResolve = Promise.Create();
-            RepeatPromise(akPromise, promiseToResolve, akPredicate);
+            RepeatPromise(promise, promiseToResolve, predicate);
             return promiseToResolve;
         }
 
-        public bool Cancel(IPromise akPromise)
+        public bool Cancel(IPromise promise)
         {
-            var node = FindInWaiting(akPromise);
+            var node = FindInWaiting(promise);
             if (node == null)
             {
                 return false;
