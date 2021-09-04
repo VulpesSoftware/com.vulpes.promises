@@ -2,16 +2,19 @@
 
 namespace Vulpes.Promises
 {
-    public abstract class AbstractPromise 
+    public abstract class AbstractPromise
     {
         protected bool isDone;
-        protected bool hasBeenRecycled;
+        protected bool recycled;
         protected Action<Exception> exceptionHandler;
         protected Exception exception;
 
         public string Name { get; protected set; }
 
-        public PromiseState PromiseState { get; protected set; }
+        [Obsolete("This property is obsolete. Use 'State' instead.", false)]
+        public PromiseState PromiseState => State;
+
+        public PromiseState State { get; protected set; }
 
         protected internal abstract void Recycle();
 
@@ -25,13 +28,13 @@ namespace Vulpes.Promises
             return true;
         }
 
-        protected bool TryReject(Exception akException)
+        protected bool TryReject(Exception exception)
         {
-            if (exception != null)
+            if (this.exception != null)
             {
                 throw new PromiseStateException("Vulpes.Promises.AbstractPromise.TryReject: Cannot Reject Promise becuase multiple Exceptions were encountered!");
             }
-            exception = akException;
+            this.exception = exception;
             return TryReject();
         }
     }
