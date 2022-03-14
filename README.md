@@ -25,9 +25,5 @@ To use this library efficiently you should first learn about Promises:
 Several features and changes are currently under investigation and may or may not be added to the package in the future.
 
 *In Progress:*
-- Restoration of missing functionality:
-  - ThenAll
-  - ThenRace
-  - Finally
-  - ContinueWith
-  - Progress
+- Reimplementation of Promise pooling feature:
+  - This feature was removed in version 2.0.0 and will be restored in a future version of this package.

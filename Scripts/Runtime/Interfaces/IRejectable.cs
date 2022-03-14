@@ -1,21 +1,15 @@
-﻿using System;
+using System;
 
 namespace Vulpes.Promises
 {
     /// <summary>
-    /// Interface for a <see cref="IPromise"/> that can be rejected.
+    /// Interface for a promise that can be rejected.
     /// </summary>
     public interface IRejectable
     {
         /// <summary>
-        /// ID for the <see cref="IPromise"/>, useful for debugging.
+        /// Reject the promise with an exception.
         /// </summary>
-        uint Id { get; }
-
-        /// <summary>
-        /// Reject the <see cref="IPromise"/> with an Exception.
-        /// </summary>
-        /// <param name="exception"></param>
-        void Reject(Exception exception);
+        void Reject(Exception ex);
     }
 }

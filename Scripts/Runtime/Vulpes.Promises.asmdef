@@ -1,3 +1,14 @@
-﻿{
-	"name": "Vulpes.Promises"
+{
+    "name": "Vulpes.Promises",
+    "rootNamespace": "Vulpes.Promises",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }

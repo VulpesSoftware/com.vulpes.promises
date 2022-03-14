@@ -1,41 +1,97 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 
 namespace Vulpes.Promises
 {
-    public abstract class AbstractPromise
+    /// <summary>
+    /// Specifies the state of a promise.
+    /// </summary>
+    public enum PromiseState : int
     {
-        protected bool isDone;
-        protected bool recycled;
-        protected Action<Exception> exceptionHandler;
-        protected Exception exception;
+        /// <summary>The promise is in-flight.</summary>
+        Pending,
+        /// <summary>The promise has been rejected.</summary>
+        Rejected,
+        /// <summary>The promise has been resolved.</summary>
+        Resolved,
+    };
+
+    /// <summary>
+    /// Arguments to the UnhandledError event.
+    /// </summary>
+    public class ExceptionEventArgs : EventArgs
+    {
+        internal ExceptionEventArgs(Exception exception)
+        {
+            Exception = exception;
+        }
+
+        public Exception Exception { get; private set; }
+    }
+
+    /// <summary>
+    /// Abstract base promise class for shared functionality.
+    /// </summary>
+    public abstract class AbstractPromise : IPromiseInfo
+    {
+        protected readonly uint id;
+
+        public uint Id => id;
 
         public string Name { get; protected set; }
 
-        [Obsolete("This property is obsolete. Use 'State' instead.", false)]
-        public PromiseState PromiseState => State;
-
+        /// <summary>
+        /// Tracks the current state of the promise.
+        /// </summary>
         public PromiseState State { get; protected set; }
 
-        protected internal abstract void Recycle();
+        /// <summary>
+        /// Id for the next promise that is created.
+        /// </summary>
+        protected static uint nextPromiseId;
 
-        protected bool TryReject()
+        /// <summary>
+        /// Increments the ID counter and gives us the ID for the next promise.
+        /// </summary>
+        internal static uint NextId() => nextPromiseId++;
+
+        /// <summary>
+        /// Set to true to enable tracking of promises.
+        /// </summary>
+        public static bool enablePromiseTracking = false;
+
+        protected static EventHandler<ExceptionEventArgs> unhandlerException;
+
+        /// <summary>
+        /// Event raised for unhandled errors.
+        /// For this to work you have to complete your promises with a call to Done().
+        /// </summary>
+        public static event EventHandler<ExceptionEventArgs> UnhandledException
         {
-            if (exception == null || exceptionHandler == null)
-            {
-                return false;
-            }
-            exceptionHandler(exception);
-            return true;
+            add => unhandlerException += value;
+            remove => unhandlerException -= value;
         }
 
-        protected bool TryReject(Exception exception)
+        /// <summary>
+        /// Information about pending promises.
+        /// </summary>
+        internal static readonly HashSet<IPromiseInfo> PendingPromises = new();
+
+        /// <summary>
+        /// Information about pending promises, useful for debugging.
+        /// This is only populated when 'EnablePromiseTracking' is set to true.
+        /// </summary>
+        public static IEnumerable<IPromiseInfo> GetPendingPromises() => PendingPromises;
+
+        /// <summary>
+        /// Raises the UnhandledException event.
+        /// </summary>
+        internal static void PropagateUnhandledException(object sender, Exception ex) => unhandlerException?.Invoke(sender, new ExceptionEventArgs(ex));
+
+        public AbstractPromise()
         {
-            if (this.exception != null)
-            {
-                throw new PromiseStateException("Vulpes.Promises.AbstractPromise.TryReject: Cannot Reject Promise becuase multiple Exceptions were encountered!");
-            }
-            this.exception = exception;
-            return TryReject();
+            State = PromiseState.Pending;
+            id = NextId();
         }
     }
 }

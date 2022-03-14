@@ -1,26 +1,111 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Vulpes.Promises
 {
-    public sealed class PromiseTimer : IPromiseTimer
+    /// <summary>
+    /// A class that wraps a pending promise with it's predicate and time data
+    /// </summary>
+    internal sealed class PredicateWait
     {
-        internal class PromiseTimerWaitPredicate
+        /// <summary>
+        /// Predicate for resolving the promise
+        /// </summary>
+        public Func<TimeData, bool> predicate;
+
+        /// <summary>
+        /// The time the promise was started
+        /// </summary>
+        public float timeStarted;
+
+        /// <summary>
+        /// The pending promise which is an interface for a promise that can be rejected or resolved.
+        /// </summary>
+        public IPendingPromise pendingPromise;
+
+        /// <summary>
+        /// The time data specific to this pending promise. Includes elapsed time and delta time.
+        /// </summary>
+        public TimeData timeData;
+
+        /// <summary>
+        /// The frame the promise was started
+        /// </summary>
+        public int frameStarted;
+    }
+
+    public class PromiseTimer : IPromiseTimer
+    {
+        /// <summary>
+        /// The current running total for time that this PromiseTimer has run for
+        /// </summary>
+        private float time;
+
+        /// <summary>
+        /// The current running total for the amount of frames the PromiseTimer has run for
+        /// </summary>
+        private int frame;
+
+        /// <summary>
+        /// Currently pending promises
+        /// </summary>
+        private readonly LinkedList<PredicateWait> waiting = new();
+
+        /// <summary>
+        /// Resolve the returned promise once the time has elapsed
+        /// </summary>
+        public IPromise WaitFor(float seconds)
         {
-            public Func<PromiseTimeData, bool> predicate;
-            public float startingTime;
-            public IPendingPromise pendingPromise;
-            public PromiseTimeData timeData;
-            public int startingFrame;
+            return WaitUntil(t => t.elapsedTime >= seconds);
         }
 
-        private float currentTime;
-        private int currentFrame;
-        private LinkedList<PromiseTimerWaitPredicate> waitingPromises = new LinkedList<PromiseTimerWaitPredicate>();
-
-        private LinkedListNode<PromiseTimerWaitPredicate> FindInWaiting(IPromise promise)
+        /// <summary>
+        /// Resolve the returned promise once the predicate evaluates to false
+        /// </summary>
+        public IPromise WaitWhile(Func<TimeData, bool> predicate)
         {
-            for (var node = waitingPromises.First; node != null; node = node.Next)
+            return WaitUntil(t => !predicate(t));
+        }
+
+        /// <summary>
+        /// Resolve the returned promise once the predicate evalutes to true
+        /// </summary>
+        public IPromise WaitUntil(Func<TimeData, bool> predicate)
+        {
+            Promise promise = new();
+
+            PredicateWait wait = new()
+            {
+                timeStarted = time,
+                pendingPromise = promise,
+                timeData = new(),
+                predicate = predicate,
+                frameStarted = frame
+            };
+
+            waiting.AddLast(wait);
+
+            return promise;
+        }
+
+        public bool Cancel(IPromise promise)
+        {
+            var node = FindInWaiting(promise);
+
+            if (node == null)
+            {
+                return false;
+            }
+
+            node.Value.pendingPromise.Reject(new PromiseCancelledException("Promise was cancelled by user."));
+            waiting.Remove(node);
+
+            return true;
+        }
+
+        LinkedListNode<PredicateWait> FindInWaiting(IPromise promise)
+        {
+            for (var node = waiting.First; node != null; node = node.Next)
             {
                 if (node.Value.pendingPromise.Id.Equals(promise.Id))
                 {
@@ -30,111 +115,55 @@ namespace Vulpes.Promises
             return null;
         }
 
-        private LinkedListNode<PromiseTimerWaitPredicate> RemoveNode(LinkedListNode<PromiseTimerWaitPredicate> node)
+        /// <summary>
+        /// Update all pending promises. Must be called for the promises to progress and resolve at all.
+        /// </summary>
+        public void Update(in float deltaTime)
         {
-            var current = node;
-            node = current.Next;
-            waitingPromises.Remove(current);
-            return node;
-        }
+            time += deltaTime;
+            frame++;
 
-        private void RepeatPromise(Func<IPromise> promise, Promise pendingPromise, Func<bool> predicate)
-        {
-            promise().Then(() =>
+            var node = waiting.First;
+            while (node != null)
             {
-                if (predicate())
-                {
-                    pendingPromise.Resolve();
-                } else
-                {
-                    RepeatPromise(promise, pendingPromise, predicate);
-                }
-            }).Catch(e =>
-            {
-                pendingPromise.Reject(e);
-            }).Done();
-        }
-
-        public void Update(float deltaTime)
-        {
-            currentTime += deltaTime;
-            currentFrame++;
-
-            var nextPromiseNode = waitingPromises.First;
-            while (nextPromiseNode != null)
-            {
-                var nextWaitingPromise = nextPromiseNode.Value;
-                var elapsedTime = currentTime - nextWaitingPromise.startingTime;
-                nextWaitingPromise.timeData.deltaTime = elapsedTime - nextWaitingPromise.timeData.elapsedTime;
-                nextWaitingPromise.timeData.elapsedTime = elapsedTime;
-                var elapsedFrames = currentFrame - nextWaitingPromise.startingFrame;
-                nextWaitingPromise.timeData.elapsedUpdates = elapsedFrames;
+                var wait = node.Value;
+                var newElapsedTime = time - wait.timeStarted;
+                wait.timeData.deltaTime = newElapsedTime - wait.timeData.elapsedTime;
+                wait.timeData.elapsedTime = newElapsedTime;
+                var newElapsedUpdates = frame - wait.frameStarted;
+                wait.timeData.elapsedUpdates = newElapsedUpdates;
 
                 bool result;
                 try
                 {
-                    result = nextWaitingPromise.predicate(nextWaitingPromise.timeData);
-                }
-                catch (Exception e)
+                    result = wait.predicate(wait.timeData);
+                } catch (Exception ex)
                 {
-                    nextWaitingPromise.pendingPromise.Reject(e);
-                    nextPromiseNode = RemoveNode(nextPromiseNode);
+                    wait.pendingPromise.Reject(ex);
+                    node = RemoveNode(node);
                     continue;
                 }
 
                 if (result)
                 {
-                    nextWaitingPromise.pendingPromise.Resolve();
-                    nextPromiseNode = RemoveNode(nextPromiseNode);
+                    wait.pendingPromise.Resolve();
+                    node = RemoveNode(node);
                 } else
                 {
-                    nextPromiseNode = nextPromiseNode.Next;
+                    node = node.Next;
                 }
             }
         }
 
-        public IPromise WaitFor(float seconds)
+        /// <summary>
+        /// Removes the provided node and returns the next node in the list.
+        /// </summary>
+        private LinkedListNode<PredicateWait> RemoveNode(LinkedListNode<PredicateWait> node)
         {
-            return WaitUntil(t => t.elapsedTime >= seconds);
-        }
-
-        public IPromise WaitWhile(Func<PromiseTimeData, bool> predicate)
-        {
-            return WaitUntil(t => !predicate(t));
-        }
-
-        public IPromise WaitUntil(Func<PromiseTimeData, bool> predicate)
-        {
-            var promise = Promise.Create();
-            var waitPredicate = new PromiseTimerWaitPredicate()
-            {
-                startingTime = currentTime,
-                startingFrame = currentFrame,
-                timeData = new PromiseTimeData(),
-                predicate = predicate,
-                pendingPromise = promise
-            };
-            waitingPromises.AddLast(waitPredicate);
-            return promise;
-        }
-
-        public IPromise RepeatUntil(Func<IPromise> promise, Func<bool> predicate)
-        {
-            var promiseToResolve = Promise.Create();
-            RepeatPromise(promise, promiseToResolve, predicate);
-            return promiseToResolve;
-        }
-
-        public bool Cancel(IPromise promise)
-        {
-            var node = FindInWaiting(promise);
-            if (node == null)
-            {
-                return false;
-            }
-            node.Value.pendingPromise.Reject(new PromiseCancelledException("Vulpes.Promises.PromiseTimer.Cancel: Promise was cancelled by user."));
-            waitingPromises.Remove(node);
-            return true;
+            var currentNode = node;
+            node = node.Next;
+            waiting.Remove(currentNode);
+            return node;
         }
     }
 }

@@ -1,50 +1,53 @@
-﻿using System;
+using System;
 
 namespace Vulpes.Promises
 {
     /// <summary>
-    /// Time data specific to a particular pending <see cref="IPromise"/>.
+    /// Time data specific to a particular pending promise.
     /// </summary>
-    public struct PromiseTimeData
+    public struct TimeData
     {
+        /// <summary>
+        /// The amount of time that has elapsed since the pending promise started running
+        /// </summary>
         public float elapsedTime;
+
+        /// <summary>
+        /// The amount of time since the last time the pending promise was updated.
+        /// </summary>
         public float deltaTime;
+
+        /// <summary>
+        /// The amount of times that update has been called since the pending promise started running
+        /// </summary>
         public int elapsedUpdates;
     }
 
-    /// <summary>
-    /// Interface for a <see cref="IPromiseTimer"/> that can return <see cref="IPromise"/>s that resolve over time or when conditions are met.
-    /// </summary>
-    public interface IPromiseTimer 
+    public interface IPromiseTimer
     {
         /// <summary>
-        /// Resolve the returned <see cref="IPromise"/> once the time has elapsed.
+        /// Resolve the returned promise once the time has elapsed
         /// </summary>
         IPromise WaitFor(float seconds);
 
         /// <summary>
-        /// Resolve the returned <see cref="IPromise"/> once the predicate evaluates to true.
+        /// Resolve the returned promise once the predicate evaluates to true
         /// </summary>
-        IPromise WaitUntil(Func<PromiseTimeData, bool> predicate);
+        IPromise WaitUntil(Func<TimeData, bool> predicate);
 
         /// <summary>
-        /// Resolve the returned <see cref="IPromise"/> once the predicate evaluates to false.
+        /// Resolve the returned promise once the predicate evaluates to false
         /// </summary>
-        IPromise WaitWhile(Func<PromiseTimeData, bool> predicate);
+        IPromise WaitWhile(Func<TimeData, bool> predicate);
 
         /// <summary>
-        /// Repeats the <see cref="IPromise"/> until the predicate evaluates to true.
+        /// Update all pending promises. Must be called for the promises to progress and resolve at all.
         /// </summary>
-        IPromise RepeatUntil(Func<IPromise> promise, Func<bool> predicate);
+        void Update(in float deltaTime);
 
         /// <summary>
-        /// Cancel a waiting <see cref="IPromise"/> and reject it immediately.
+        /// Cancel a waiting promise and reject it immediately.
         /// </summary>
         bool Cancel(IPromise promise);
-
-        /// <summary>
-        /// Update all pending <see cref="IPromise"/>s. Must be called for the <see cref="IPromise"/>s to progress and resolve at all.
-        /// </summary>
-        void Update(float deltaTime);
     }
 }

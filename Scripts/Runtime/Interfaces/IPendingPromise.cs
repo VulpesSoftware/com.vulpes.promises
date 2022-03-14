@@ -1,24 +1,34 @@
-﻿namespace Vulpes.Promises
+namespace Vulpes.Promises
 {
     /// <summary>
-    /// Interface for a <see cref="IPromise"/> that can be rejected or resolved.
+    /// Interface for a promise that can be rejected or resolved.
     /// </summary>
-    public interface IPendingPromise : IRejectable
+    public interface IPendingPromise : IRejectable, IPromiseInfo
     {
         /// <summary>
-        /// Resolve the <see cref="IPromise"/>.
+        /// Resolve the promise with a particular value.
         /// </summary>
         void Resolve();
+
+        /// <summary>
+        /// Report progress in a promise.
+        /// </summary>
+        void ReportProgress(in float progress);
     }
 
     /// <summary>
-    /// Interface for a <see cref="IPromise"/> that can be rejected or resolved with a value of type <see cref="PromisedT"/>.
+    /// Interface for a promise that can be rejected or resolved.
     /// </summary>
-    public interface IPendingPromise<PromisedT> : IRejectable
+    public interface IPendingPromise<PromisedT> : IRejectable, IPromiseInfo
     {
         /// <summary>
-        /// Resolve the <see cref="IPromise"/> with a value of type <see cref="PromisedT"/>.
+        /// Resolve the promise with a particular value.
         /// </summary>
         void Resolve(PromisedT value);
+
+        /// <summary>
+        /// Report progress in a promise.
+        /// </summary>
+        void ReportProgress(in float progress);
     }
 }
