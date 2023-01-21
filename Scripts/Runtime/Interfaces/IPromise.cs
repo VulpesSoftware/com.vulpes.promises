@@ -3,308 +3,147 @@ using System.Collections.Generic;
 
 namespace Vulpes.Promises
 {
-    /// <summary>
-    /// Implements a C# promise, this is a promise that simply resolves without delivering a value.
-    /// https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Promise
-    /// </summary>
-    public interface IPromise : IPendingPromise
+    public interface IPromise : IResolvable
     {
-        /// <summary>
-        /// Set the name of the promise, useful for debugging.
-        /// </summary>
         IPromise WithName(in string name);
 
-        /// <summary>
-        /// Completes the promise. 
-        /// <paramref name="onResolved"/> is called on successful completion.
-        /// <paramref name="onRejected"/> is called on error.
-        /// </summary>
-        void Done(Action onResolved, Action<Exception> onRejected);
+        #region Done
 
-        /// <summary>
-        /// Completes the promise. 
-        /// <paramref name="onResolved"/> is called on successful completion.
-        /// Adds a default error handler.
-        /// </summary>
         void Done(Action onResolved);
 
-        /// <summary>
-        /// Complete the promise.
-        /// Adds a default error handler.
-        /// </summary>
+        void Done(Action onResolved, Action<Exception> onRejected);
+
         void Done();
 
-        /// <summary>
-        /// Handle errors for the promise. 
-        /// </summary>
+        #endregion
+
         IPromise Catch(Action<Exception> onRejected);
 
-        /// <summary>
-        /// Add a resolved callback that chains a value promise (optionally converting to a different value type).
-        /// </summary>
-        IPromise<ConvertedT> Then<ConvertedT>(Func<IPromise<ConvertedT>> onResolved);
+        #region Then
 
-        /// <summary>
-        /// Add a resolved callback that chains a non-value promise.
-        /// </summary>
+        IPromise<TConvertedType> Then<TConvertedType>(Func<IPromise<TConvertedType>> onResolved, Func<Exception, IPromise<TConvertedType>> onRejected);
+
         IPromise Then(Func<IPromise> onResolved);
 
-        /// <summary>
-        /// Add a resolved callback.
-        /// </summary>
         IPromise Then(Action onResolved);
 
-        /// <summary>
-        /// Add a resolved callback and a rejected callback.
-        /// The resolved callback chains a value promise (optionally converting to a different value type).
-        /// </summary>
-        IPromise<ConvertedT> Then<ConvertedT>(Func<IPromise<ConvertedT>> onResolved, Func<Exception, IPromise<ConvertedT>> onRejected);
-
-        /// <summary>
-        /// Add a resolved callback and a rejected callback.
-        /// The resolved callback chains a non-value promise.
-        /// </summary>
         IPromise Then(Func<IPromise> onResolved, Action<Exception> onRejected);
 
-        /// <summary>
-        /// Add a resolved callback and a rejected callback.
-        /// </summary>
         IPromise Then(Action onResolved, Action<Exception> onRejected);
 
-        /// <summary>
-        /// Add a resolved callback, a rejected callback and a progress callback.
-        /// The resolved callback chains a value promise (optionally converting to a different value type).
-        /// </summary>
-        IPromise<ConvertedT> Then<ConvertedT>(Func<IPromise<ConvertedT>> onResolved, Func<Exception, IPromise<ConvertedT>> onRejected, Action<float> onProgress);
+        IPromise<TConvertedType> Then<TConvertedType>(Func<IPromise<TConvertedType>> onResolved);
 
-        /// <summary>
-        /// Add a resolved callback, a rejected callback and a progress callback.
-        /// The resolved callback chains a non-value promise.
-        /// </summary>
+        IPromise<TConvertedType> Then<TConvertedType>(Func<IPromise<TConvertedType>> onResolved, Func<Exception, IPromise<TConvertedType>> onRejected, Action<float> onProgress);
+
         IPromise Then(Func<IPromise> onResolved, Action<Exception> onRejected, Action<float> onProgress);
 
-        /// <summary>
-        /// Add a resolved callback, a rejected callback and a progress callback.
-        /// </summary>
         IPromise Then(Action onResolved, Action<Exception> onRejected, Action<float> onProgress);
 
-        /// <summary>
-        /// Chain an enumerable of promises, all of which must resolve.
-        /// The resulting promise is resolved when all of the promises have resolved.
-        /// It is rejected as soon as any of the promises have been rejected.
-        /// </summary>
+        #endregion
+
+        #region ThenAll
+
         IPromise ThenAll(Func<IEnumerable<IPromise>> chain);
 
-        /// <summary>
-        /// Chain an enumerable of promises, all of which must resolve.
-        /// Converts to a non-value promise.
-        /// The resulting promise is resolved when all of the promises have resolved.
-        /// It is rejected as soon as any of the promises have been rejected.
-        /// </summary>
-        IPromise<IEnumerable<ConvertedT>> ThenAll<ConvertedT>(Func<IEnumerable<IPromise<ConvertedT>>> chain);
+        IPromise<IEnumerable<TConvertedType>> ThenAll<TConvertedType>(Func<IEnumerable<IPromise<TConvertedType>>> chain);
 
-        /// <summary>
-        /// Chain a sequence of operations using promises.
-        /// Reutrn a collection of functions each of which starts an async operation and yields a promise.
-        /// Each function will be called and each promise resolved in turn.
-        /// The resulting promise is resolved after each promise is resolved in sequence.
-        /// </summary>
+        #endregion
+
         IPromise ThenSequence(Func<IEnumerable<Func<IPromise>>> chain);
 
-        /// <summary>
-        /// Takes a function that yields an enumerable of promises.
-        /// Returns a promise that resolves when the first of the promises has resolved.
-        /// </summary>
+        #region ThenRace
+
         IPromise ThenRace(Func<IEnumerable<IPromise>> chain);
 
-        /// <summary>
-        /// Takes a function that yields an enumerable of promises.
-        /// Converts to a value promise.
-        /// Returns a promise that resolves when the first of the promises has resolved.
-        /// </summary>
-        IPromise<ConvertedT> ThenRace<ConvertedT>(Func<IEnumerable<IPromise<ConvertedT>>> chain);
+        IPromise<TConvertedType> ThenRace<TConvertedType>(Func<IEnumerable<IPromise<TConvertedType>>> chain);
 
-        /// <summary> 
-        /// Add a finally callback. 
-        /// Finally callbacks will always be called, even if any preceding promise is rejected, or encounters an error.
-        /// The returned promise will be resolved or rejected, as per the preceding promise.
-        /// </summary> 
+        #endregion
+
         IPromise Finally(Action onComplete);
 
-        /// <summary>
-        /// Add a callback that chains a non-value promise.
-        /// ContinueWith callbacks will always be called, even if any preceding promise is rejected, or encounters an error.
-        /// The state of the returning promise will be based on the new non-value promise, not the preceding (rejected or resolved) promise.
-        /// </summary>
+        #region ContinueWith
+
         IPromise ContinueWith(Func<IPromise> onResolved);
 
-        /// <summary> 
-        /// Add a callback that chains a value promise (optionally converting to a different value type).
-        /// ContinueWith callbacks will always be called, even if any preceding promise is rejected, or encounters an error.
-        /// The state of the returning promise will be based on the new value promise, not the preceding (rejected or resolved) promise.
-        /// </summary> 
-        IPromise<ConvertedT> ContinueWith<ConvertedT>(Func<IPromise<ConvertedT>> onComplete);
+        IPromise<TConvertedType> ContinueWith<TConvertedType>(Func<IPromise<TConvertedType>> onComplete);
 
-        /// <summary>
-        /// Add a progress callback.
-        /// Progress callbacks will be called whenever the promise owner reports progress towards the resolution
-        /// of the promise.
-        /// </summary>
+        #endregion
+
         IPromise Progress(Action<float> onProgress);
     }
 
-    /// <summary>
-    /// Implements a C# promise.
-    /// https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Promise
-    /// </summary>
-    public interface IPromise<PromisedT> : IPendingPromise<PromisedT>
+    public interface IPromise<TPromisedType> : IResolvable<TPromisedType>
     {
-        /// <summary>
-        /// Set the name of the promise, useful for debugging.
-        /// </summary>
-        IPromise<PromisedT> WithName(in string name);
+        IPromise<TPromisedType> WithName(in string name);
 
-        /// <summary>
-        /// Completes the promise. 
-        /// <paramref name="onResolved"/> is called on successful completion.
-        /// <paramref name="onRejected"/> is called on error.
-        /// </summary>
-        void Done(Action<PromisedT> onResolved, Action<Exception> onRejected);
+        #region Done
 
-        /// <summary>
-        /// Completes the promise. 
-        /// <paramref name="onResolved"/> is called on successful completion.
-        /// Adds a default error handler.
-        /// </summary>
-        void Done(Action<PromisedT> onResolved);
+        void Done(Action<TPromisedType> onResolved, Action<Exception> onRejected);
 
-        /// <summary>
-        /// Complete the promise. Adds a default error handler.
-        /// </summary>
+        void Done(Action<TPromisedType> onResolved);
+
         void Done();
 
-        /// <summary>
-        /// Handle errors for the promise. 
-        /// </summary>
+        #endregion
+
+        #region Catch
+
         IPromise Catch(Action<Exception> onRejected);
 
-        /// <summary>
-        /// Handle errors for the promise. 
-        /// </summary>
-        IPromise<PromisedT> Catch(Func<Exception, PromisedT> onRejected);
+        IPromise<TPromisedType> Catch(Func<Exception, TPromisedType> onRejected);
 
-        /// <summary>
-        /// Add a resolved callback that chains a value promise (optionally converting to a different value type).
-        /// </summary>
-        IPromise<ConvertedT> Then<ConvertedT>(Func<PromisedT, IPromise<ConvertedT>> onResolved);
+        #endregion
 
-        /// <summary>
-        /// Add a resolved callback that chains a non-value promise.
-        /// </summary>
-        IPromise Then(Func<PromisedT, IPromise> onResolved);
+        #region Then
 
-        /// <summary>
-        /// Add a resolved callback.
-        /// </summary>
-        IPromise Then(Action<PromisedT> onResolved);
+        IPromise<TConvertedType> Then<TConvertedType>(Func<TPromisedType, IPromise<TConvertedType>> onResolved);
 
-        /// <summary>
-        /// Add a resolved callback and a rejected callback.
-        /// The resolved callback chains a value promise (optionally converting to a different value type).
-        /// </summary>
-        IPromise<ConvertedT> Then<ConvertedT>(Func<PromisedT, IPromise<ConvertedT>> onResolved, Func<Exception, IPromise<ConvertedT>> onRejected);
+        IPromise Then(Func<TPromisedType, IPromise> onResolved);
 
-        /// <summary>
-        /// Add a resolved callback and a rejected callback.
-        /// The resolved callback chains a non-value promise.
-        /// </summary>
-        IPromise Then(Func<PromisedT, IPromise> onResolved, Action<Exception> onRejected);
+        IPromise Then(Action<TPromisedType> onResolved);
 
-        /// <summary>
-        /// Add a resolved callback and a rejected callback.
-        /// </summary>
-        IPromise Then(Action<PromisedT> onResolved, Action<Exception> onRejected);
+        IPromise<TConvertedType> Then<TConvertedType>(Func<TPromisedType, IPromise<TConvertedType>> onResolved, Func<Exception, IPromise<TConvertedType>> onRejected);
 
-        /// <summary>
-        /// Add a resolved callback, a rejected callback and a progress callback.
-        /// The resolved callback chains a value promise (optionally converting to a different value type).
-        /// </summary>
-        IPromise<ConvertedT> Then<ConvertedT>(Func<PromisedT, IPromise<ConvertedT>> onResolved, Func<Exception, IPromise<ConvertedT>> onRejected, Action<float> onProgress);
+        IPromise Then(Func<TPromisedType, IPromise> onResolved, Action<Exception> onRejected);
 
-        /// <summary>
-        /// Add a resolved callback, a rejected callback and a progress callback.
-        /// The resolved callback chains a non-value promise.
-        /// </summary>
-        IPromise Then(Func<PromisedT, IPromise> onResolved, Action<Exception> onRejected, Action<float> onProgress);
+        IPromise Then(Action<TPromisedType> onResolved, Action<Exception> onRejected);
 
-        /// <summary>
-        /// Add a resolved callback, a rejected callback and a progress callback.
-        /// </summary>
-        IPromise Then(Action<PromisedT> onResolved, Action<Exception> onRejected, Action<float> onProgress);
+        IPromise<TConvertedType> Then<TConvertedType>(Func<TPromisedType, IPromise<TConvertedType>> onResolved, Func<Exception, IPromise<TConvertedType>> onRejected, Action<float> onProgress);
 
-        /// <summary>
-        /// Return a new promise with a different value.
-        /// May also change the type of the value.
-        /// </summary>
-        IPromise<ConvertedT> Then<ConvertedT>(Func<PromisedT, ConvertedT> transform);
+        IPromise Then(Func<TPromisedType, IPromise> onResolved, Action<Exception> onRejected, Action<float> onProgress);
 
-        /// <summary>
-        /// Chain an enumerable of promises, all of which must resolve.
-        /// Returns a promise for a collection of the resolved results.
-        /// The resulting promise is resolved when all of the promises have resolved.
-        /// It is rejected as soon as any of the promises have been rejected.
-        /// </summary>
-        IPromise<IEnumerable<ConvertedT>> ThenAll<ConvertedT>(Func<PromisedT, IEnumerable<IPromise<ConvertedT>>> chain);
+        IPromise Then(Action<TPromisedType> onResolved, Action<Exception> onRejected, Action<float> onProgress);
 
-        /// <summary>
-        /// Chain an enumerable of promises, all of which must resolve.
-        /// Converts to a non-value promise.
-        /// The resulting promise is resolved when all of the promises have resolved.
-        /// It is rejected as soon as any of the promises have been rejected.
-        /// </summary>
-        IPromise ThenAll(Func<PromisedT, IEnumerable<IPromise>> chain);
+        IPromise<TConvertedType> Then<TConvertedType>(Func<TPromisedType, TConvertedType> transform);
 
-        /// <summary>
-        /// Takes a function that yields an enumerable of promises.
-        /// Returns a promise that resolves when the first of the promises has resolved.
-        /// Yields the value from the first promise that has resolved.
-        /// </summary>
-        IPromise<ConvertedT> ThenRace<ConvertedT>(Func<PromisedT, IEnumerable<IPromise<ConvertedT>>> chain);
+        #endregion
 
-        /// <summary>
-        /// Takes a function that yields an enumerable of promises.
-        /// Converts to a non-value promise.
-        /// Returns a promise that resolves when the first of the promises has resolved.
-        /// Yields the value from the first promise that has resolved.
-        /// </summary>
-        IPromise ThenRace(Func<PromisedT, IEnumerable<IPromise>> chain);
+        #region ThenAll
 
-        /// <summary> 
-        /// Add a finally callback. 
-        /// Finally callbacks will always be called, even if any preceding promise is rejected, or encounters an error.
-        /// The returned promise will be resolved or rejected, as per the preceding promise.
-        /// </summary> 
-        IPromise<PromisedT> Finally(Action onComplete);
+        IPromise<IEnumerable<TConvertedType>> ThenAll<TConvertedType>(Func<TPromisedType, IEnumerable<IPromise<TConvertedType>>> chain);
 
-        /// <summary>
-        /// Add a callback that chains a non-value promise.
-        /// ContinueWith callbacks will always be called, even if any preceding promise is rejected, or encounters an error.
-        /// The state of the returning promise will be based on the new non-value promise, not the preceding (rejected or resolved) promise.
-        /// </summary>
+        IPromise ThenAll(Func<TPromisedType, IEnumerable<IPromise>> chain);
+
+        #endregion
+
+        #region ThenRace
+
+        IPromise<TConvertedType> ThenRace<TConvertedType>(Func<TPromisedType, IEnumerable<IPromise<TConvertedType>>> chain);
+
+        IPromise ThenRace(Func<TPromisedType, IEnumerable<IPromise>> chain);
+
+        #endregion
+
+        IPromise<TPromisedType> Finally(Action onComplete);
+
+        #region ContinueWith
+
         IPromise ContinueWith(Func<IPromise> onResolved);
 
-        /// <summary> 
-        /// Add a callback that chains a value promise (optionally converting to a different value type).
-        /// ContinueWith callbacks will always be called, even if any preceding promise is rejected, or encounters an error.
-        /// The state of the returning promise will be based on the new value promise, not the preceding (rejected or resolved) promise.
-        /// </summary> 
-        IPromise<ConvertedT> ContinueWith<ConvertedT>(Func<IPromise<ConvertedT>> onComplete);
+        IPromise<TConvertedType> ContinueWith<TConvertedType>(Func<IPromise<TConvertedType>> onComplete);
 
-        /// <summary>
-        /// Add a progress callback.
-        /// Progress callbacks will be called whenever the promise owner reports progress towards the resolution
-        /// of the promise.
-        /// </summary>
-        IPromise<PromisedT> Progress(Action<float> onProgress);
+        #endregion
+
+        IPromise<TPromisedType> Progress(Action<float> onProgress);
     }
 }

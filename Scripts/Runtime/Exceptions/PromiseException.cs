@@ -1,11 +1,8 @@
-﻿using System;
+using System;
 
 namespace Vulpes.Promises
 {
-    /// <summary>
-    /// Base class for <see cref="Promises"/> exceptions.
-    /// </summary>
-    public class PromiseException : Exception
+    public abstract class PromiseException : Exception
     {
         public PromiseException() { }
 

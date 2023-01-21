@@ -1,18 +1,24 @@
-namespace Vulpes.Promises
+﻿namespace Vulpes.Promises
 {
-    /// <summary>
-    /// Used to list information of pending promises.
-    /// </summary>
+    public enum PromiseState : int
+    {
+        Pending,
+        Rejected,
+        Resolved,
+    }
+
     public interface IPromiseInfo
     {
-        /// <summary>
-        /// ID of the promise, useful for debugging.
-        /// </summary>
         uint Id { get; }
 
-        /// <summary>
-        /// Name of the promise, when set, useful for debugging.
-        /// </summary>
         string Name { get; }
+
+        PromiseState State { get; }
+
+        bool IsPending { get; }
+
+        bool IsRejected { get; }
+
+        bool IsResolved { get; }
     }
 }

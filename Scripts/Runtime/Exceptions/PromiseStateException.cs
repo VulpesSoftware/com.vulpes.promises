@@ -1,10 +1,7 @@
-﻿using System;
+using System;
 
 namespace Vulpes.Promises
 {
-    /// <summary>
-    /// Exception thrown when an operation is performed on a promise that is in an invalid state for it to handle.
-    /// </summary>
     public sealed class PromiseStateException : PromiseException
     {
         public PromiseStateException() { }
