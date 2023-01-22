@@ -4,6 +4,10 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2023-01-22
+###Added
+- Added 'ThenSequence(params Func<IPromise>[])' overload method to the 'IPromise' interface.
+
 ## [2.1.0] - 2023-01-21
 ###Changed
 - Resolved issue where 'Any' and 'Race' could cause exceptions to be thrown.
