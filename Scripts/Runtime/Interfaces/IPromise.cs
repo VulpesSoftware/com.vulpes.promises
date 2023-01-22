@@ -49,7 +49,13 @@ namespace Vulpes.Promises
 
         #endregion
 
+        #region ThenSequence
+
         IPromise ThenSequence(Func<IEnumerable<Func<IPromise>>> chain);
+
+        IPromise ThenSequence(params Func<IPromise>[] chain);
+
+        #endregion
 
         #region ThenRace
 

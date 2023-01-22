@@ -524,6 +524,9 @@ namespace Vulpes.Promises
         public IPromise ThenSequence(Func<IEnumerable<Func<IPromise>>> chain)
             => Then(() => Sequence(chain()));
 
+        public IPromise ThenSequence(params Func<IPromise>[] chain)
+            => Then(() => Sequence((IEnumerable<Func<IPromise>>)chain));
+
         public static IPromise Sequence(params Func<IPromise>[] fns)
             => Sequence((IEnumerable<Func<IPromise>>)fns);
 
